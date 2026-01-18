@@ -1,4 +1,6 @@
 package com.proyecto.excelupload.aplication;
+import com.proyecto.excelupload.api.dto.ClienteDto;
+import com.proyecto.excelupload.api.dto.ProductoDto;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,12 +14,12 @@ import java.util.Map;
 @Service
 public class ExcelService {
 
-    public List<Map<String, Object>> readExcel(MultipartFile file) throws Exception{
+    public List<ClienteDto> readExcel(MultipartFile file) throws Exception{
         InputStream is = file.getInputStream();
         Workbook workbook = WorkbookFactory.create(is);
         Sheet sheet = workbook.getSheetAt(0);
 
-        Map<String, Map<String, Object>> clientes = new LinkedHashMap<>();
+        Map<String, ClienteDto> cliente = new LinkedHashMap<>();
 
         boolean firstRow = true;
 
@@ -28,32 +30,31 @@ public class ExcelService {
                 continue;
             }
 
-            String cliente = getCellValue(row.getCell(0));
+            String nombreCliente = getCellValue(row.getCell(0));
             String tipoProducto = getCellValue(row.getCell(1));
             String bolso = getCellValue(row.getCell(2));
             String ropa = getCellValue(row.getCell(3));
 
-            clientes.putIfAbsent(cliente, new LinkedHashMap<>());
-            Map<String, Object> clienteMap = clientes.get(cliente);
+            cliente.putIfAbsent(nombreCliente, crearCliente(nombreCliente));
+            ClienteDto clienteDTO = cliente.get(nombreCliente);
 
-            clienteMap.putIfAbsent("cliente", cliente);
-            clienteMap.putIfAbsent("productos", new LinkedHashMap<>());
+            ProductoDto productos = clienteDTO.getProductos();
 
-            Map<String, Map<String, String>> productos =
-                    (Map<String, Map<String, String>>) clienteMap.get("productos");
+            if ("bolsos".equalsIgnoreCase(tipoProducto)) {
+                productos.setBolsos(
+                        agregarProducto(productos.getBolsos(), "bolso", bolso)
+                );
+            }
 
-            productos.putIfAbsent(tipoProducto, new LinkedHashMap<>());
-            Map<String, String> listaProductos = productos.get(tipoProducto);
-
-            String valor = tipoProducto.equals("bolsos") ? bolso : ropa;
-
-            int index = listaProductos.size() + 1;
-            listaProductos.put(tipoProducto.substring(0, tipoProducto.length() - 1) + index,
-                    valor.isEmpty() ? null : valor);
+            if ("ropa".equalsIgnoreCase(tipoProducto)) {
+                productos.setRopa(
+                        agregarProducto(productos.getRopa(), "prenda", ropa)
+                );
+            }
         }
 
         workbook.close();
-        return new ArrayList<>(clientes.values());
+        return new ArrayList<>(cliente.values());
     }
 
     private String getCellValue(Cell cell) {
@@ -74,5 +75,26 @@ public class ExcelService {
         }
 
         return "";
+    }
+
+    private ClienteDto crearCliente(String nombre) {
+        ClienteDto dto = new ClienteDto();
+        dto.setCliente(nombre);
+        dto.setProductos(new ProductoDto());
+        return dto;
+    }
+
+    private Map<String, String> agregarProducto(
+            Map<String, String> productos,
+            String prefijo,
+            String valor) {
+
+        if (productos == null) {
+            productos = new LinkedHashMap<>();
+        }
+
+        int index = productos.size() + 1;
+        productos.put(prefijo + index, valor.isEmpty() ? null : valor);
+        return productos;
     }
 }
