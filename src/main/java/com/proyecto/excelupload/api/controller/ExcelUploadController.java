@@ -1,6 +1,7 @@
 package com.proyecto.excelupload.api.controller;
 
 import com.proyecto.excelupload.api.dto.ClienteConfirmacionDto;
+import com.proyecto.excelupload.aplication.ClienteService;
 import com.proyecto.excelupload.aplication.ExcelService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -17,9 +18,11 @@ import java.util.List;
 public class ExcelUploadController {
 
     private final ExcelService excelService;
+    private final ClienteService clienteService;
 
-    public ExcelUploadController(ExcelService excelService) {
+    public ExcelUploadController(ExcelService excelService, ClienteService clienteService) {
         this.excelService = excelService;
+        this.clienteService = clienteService;
     }
 
     @PostMapping("/excel")
@@ -42,9 +45,7 @@ public class ExcelUploadController {
     public ResponseEntity<String> confirmarClientes(
             @RequestBody List<ClienteConfirmacionDto> confirmaciones) {
 
-        long confirmados = confirmaciones.stream()
-                .filter(ClienteConfirmacionDto::isConfirmado)
-                .count();
+       int confirmados = clienteService.guardarConfirmados(confirmaciones);
 
         return ResponseEntity.ok(
                 "Clientes confirmados para guardar: " + confirmados
